@@ -15,6 +15,7 @@ export * from "./dub-partners";
 export * from "./dub-product-icon";
 export * from "./expanding-arrow";
 export * from "./ios-app-store";
+export * from "./lock-small";
 export * from "./magic";
 export * from "./markdown-icon";
 export * from "./matrix-lines";
@@ -29,17 +30,16 @@ export * from "./loading-dots";
 export * from "./loading-spinner";
 
 // brand logos
+export * from "./anthropic";
 export * from "./facebook";
 export * from "./github";
 export * from "./google";
 export * from "./instagram";
 export * from "./linkedin";
-export * from "./prisma";
+export * from "./openai";
 export * from "./product-hunt";
-export * from "./raycast";
 export * from "./slack";
 export * from "./tiktok";
-export * from "./tinybird";
 export * from "./twitter";
 export * from "./unsplash";
 export * from "./youtube";

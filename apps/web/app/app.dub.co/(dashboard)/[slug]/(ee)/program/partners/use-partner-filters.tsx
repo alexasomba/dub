@@ -6,11 +6,14 @@ import { PartnerStatusBadges } from "@/ui/partners/partner-status-badges";
 import { useRouterStuff } from "@dub/ui";
 import { CircleDotted, FlagWavy, Users6 } from "@dub/ui/icons";
 import { cn, COUNTRIES, nFormatter } from "@dub/utils";
+import { ProgramEnrollmentStatus } from "@prisma/client";
 import { useMemo } from "react";
 
 export function usePartnerFilters(extraSearchParams: Record<string, string>) {
   const { searchParamsObj, queryParams } = useRouterStuff();
   const { id: workspaceId, slug } = useWorkspace();
+  const status = (searchParamsObj.status ||
+    "approved") as ProgramEnrollmentStatus;
 
   const { groups } = useGroups();
 
@@ -22,6 +25,7 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
     | undefined
   >({
     groupBy: "country",
+    status,
   });
 
   const { partnersCount: statusCount } = usePartnersCount<
@@ -31,10 +35,10 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
       }[]
     | undefined
   >({
-    groupBy: "status",
+    groupBy: "status", // here we include all statuses to get the groupBy count
   });
 
-  const { partnersCount: groupCount } = usePartnersCount<
+  const { partnersCount: groupsCount } = usePartnersCount<
     | {
         groupId: string;
         _count: number;
@@ -42,6 +46,7 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
     | undefined
   >({
     groupBy: "groupId",
+    status,
   });
 
   const filters = useMemo(
@@ -51,19 +56,24 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
         icon: Users6,
         label: "Group",
         options:
-          groups?.map((group) => {
-            const count = groupCount?.find(
-              ({ groupId }) => groupId === group.id,
-            )?._count;
+          groupsCount && groups
+            ? groupsCount
+                .filter(({ groupId }) =>
+                  groups.find(({ id }) => id === groupId),
+                )
+                .map(({ groupId, _count }) => {
+                  const groupData = groups.find(({ id }) => id === groupId)!; // coerce cause we already filtered above
 
-            return {
-              value: group.id,
-              label: group.name,
-              icon: <GroupColorCircle group={group} />,
-              right: nFormatter(count || 0, { full: true }),
-              permalink: `/${slug}/program/groups/${group.slug}/rewards`,
-            };
-          }) ?? null,
+                  return {
+                    value: groupId,
+                    label: groupData.name,
+                    icon: <GroupColorCircle group={groupData} />,
+                    right: nFormatter(_count || 0, { full: true }),
+                    permalink: `/${slug}/program/groups/${groupData.slug}/rewards`,
+                  };
+                })
+                .filter((group) => group !== null)
+            : null,
       },
       {
         key: "status",
@@ -96,8 +106,8 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
         getOptionIcon: (value) => (
           <img
             alt={value}
-            src={`https://flag.vercel.app/m/${value}.svg`}
-            className="h-2.5 w-4"
+            src={`https://hatscripts.github.io/circle-flags/flags/${value.toLowerCase()}.svg`}
+            className="size-4 shrink-0"
           />
         ),
         getOptionLabel: (value) => COUNTRIES[value],
@@ -111,16 +121,16 @@ export function usePartnerFilters(extraSearchParams: Record<string, string>) {
             })) ?? [],
       },
     ],
-    [groupCount, groups, statusCount, countriesCount],
+    [groupsCount, groups, statusCount, countriesCount],
   );
 
   const activeFilters = useMemo(() => {
-    const { status, country, groupId } = searchParamsObj;
+    const { groupId, status, country } = searchParamsObj;
 
     return [
+      ...(groupId ? [{ key: "groupId", value: groupId }] : []),
       ...(status ? [{ key: "status", value: status }] : []),
       ...(country ? [{ key: "country", value: country }] : []),
-      ...(groupId ? [{ key: "groupId", value: groupId }] : []),
     ];
   }, [searchParamsObj]);
 

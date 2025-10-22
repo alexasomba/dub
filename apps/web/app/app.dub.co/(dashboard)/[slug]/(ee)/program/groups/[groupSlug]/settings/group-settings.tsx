@@ -56,14 +56,12 @@ function GroupSettingsForm({ group }: { group: GroupProps }) {
       method: "PATCH",
       body: data,
       onSuccess: async () => {
-        toast.success("Group updated successfully!");
-
+        await mutatePrefix("/api/groups");
         // If slug changed, redirect to new URL
         if (data.slug !== group.slug) {
           router.push(`/${slug}/program/groups/${data.slug}/settings`);
         }
-
-        await mutatePrefix("/api/groups");
+        toast.success("Group updated successfully!");
       },
     });
   };
@@ -182,10 +180,10 @@ function GroupSettingsForm({ group }: { group: GroupProps }) {
               </div>
 
               <p className="mt-2 text-xs text-neutral-500">
-                For embedding the Dub white-labeled referral dashboard within
-                your app.{" "}
+                For setting up the Dub embedded referral dashboard within your
+                app.{" "}
                 <Link
-                  href="https://dub.co/docs/partners/white-labeling"
+                  href="https://dub.co/docs/partners/embedded-referrals"
                   target="_blank"
                   className="underline"
                 >

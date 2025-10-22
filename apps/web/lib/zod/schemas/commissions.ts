@@ -3,7 +3,7 @@ import { CommissionStatus, CommissionType } from "@dub/prisma/client";
 import { z } from "zod";
 import { CustomerSchema } from "./customers";
 import { getPaginationQuerySchema } from "./misc";
-import { PartnerSchema } from "./partners";
+import { PartnerSchema, WebhookPartnerSchema } from "./partners";
 import { parseDateSchema } from "./utils";
 
 export const CommissionSchema = z.object({
@@ -41,6 +41,14 @@ export const CommissionEnrichedSchema = CommissionSchema.merge(
   }),
 );
 
+// "commission.created" webhook event schema
+export const CommissionWebhookSchema = CommissionSchema.merge(
+  z.object({
+    partner: WebhookPartnerSchema,
+    customer: CustomerSchema.nullish(), // customer can be null for click-based / custom commissions
+  }),
+);
+
 export const getCommissionsQuerySchema = z
   .object({
     type: z.nativeEnum(CommissionType).optional(),
@@ -55,7 +63,15 @@ export const getCommissionsQuerySchema = z
     partnerId: z
       .string()
       .optional()
-      .describe("Filter the list of commissions by the associated partner."),
+      .describe(
+        "Filter the list of commissions by the associated partner. When specified, takes precedence over `tenantId`.",
+      ),
+    tenantId: z
+      .string()
+      .optional()
+      .describe(
+        "Filter the list of commissions by the associated partner's `tenantId` (their unique ID within your database).",
+      ),
     groupId: z
       .string()
       .optional()
@@ -107,6 +123,8 @@ export const getCommissionsCountQuerySchema = getCommissionsQuerySchema.omit({
 export const createCommissionSchema = z.object({
   workspaceId: z.string(),
   partnerId: z.string(),
+  commissionType: z.nativeEnum(CommissionType),
+  useExistingEvents: z.boolean(),
 
   // Custom
   date: parseDateSchema.nullish(),
@@ -123,6 +141,7 @@ export const createCommissionSchema = z.object({
   saleEventDate: parseDateSchema.nullish(),
   saleAmount: z.number().min(0).nullish(),
   invoiceId: z.string().nullish(),
+  productId: z.string().nullish(),
 });
 
 export const updateCommissionSchema = z.object({

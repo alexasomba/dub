@@ -1,10 +1,10 @@
 import { isNotHostedImage, storage } from "@/lib/storage";
-import z from "@/lib/zod";
 import { bulkUpdateLinksBodySchema } from "@/lib/zod/schemas/links";
 import { prisma } from "@dub/prisma";
 import { Prisma } from "@dub/prisma/client";
 import { R2_URL, getParamsFromURL, nanoid, truncate } from "@dub/utils";
 import { waitUntil } from "@vercel/functions";
+import { z } from "zod";
 import { combineTagIds } from "../tags/combine-tag-ids";
 import { propagateBulkLinkChanges } from "./propagate-bulk-link-changes";
 import { transformLink } from "./utils";
@@ -54,8 +54,8 @@ export async function bulkUpdateLinks(
               ? `${R2_URL}/images/${linkIds[0]}_${imageUrlNonce}`
               : image,
           expiresAt: expiresAt ? new Date(expiresAt) : expiresAt,
-          geo: geo === null ? Prisma.JsonNull : geo,
-          testVariants: testVariants === null ? Prisma.JsonNull : testVariants,
+          geo: geo === null ? Prisma.DbNull : geo,
+          testVariants: testVariants === null ? Prisma.DbNull : testVariants,
 
           ...(url && getParamsFromURL(url)),
           // Associate tags by tagNames

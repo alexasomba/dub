@@ -1,6 +1,7 @@
 "use client";
 
 import useWorkspace from "@/lib/swr/use-workspace";
+import { usePartnersUpgradeModal } from "@/ui/partners/partners-upgrade-modal";
 import { UpgradePlanButton } from "@/ui/workspaces/upgrade-plan-button";
 import {
   ChartLine,
@@ -19,7 +20,8 @@ import { isLegacyBusinessPlan } from "@dub/utils/src/constants/pricing";
 import NumberFlow from "@number-flow/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { CSSProperties, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CSSProperties, useEffect, useState } from "react";
 
 const COMPARE_FEATURE_ICONS: Record<
   (typeof PLAN_COMPARE_FEATURES)[number]["category"],
@@ -42,10 +44,23 @@ export function WorkspaceBillingUpgradePageClient() {
   const { slug, plan: currentPlan, stripeId, payoutsLimit } = useWorkspace();
 
   const [mobilePlanIndex, setMobilePlanIndex] = useState(0);
-  const [period, setPeriod] = useState<"monthly" | "yearly">("yearly");
+  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
+
+  const { partnersUpgradeModal, setShowPartnersUpgradeModal } =
+    usePartnersUpgradeModal({
+      plan: "Advanced",
+    });
+
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("plan") === "advanced") {
+      setShowPartnersUpgradeModal(true);
+    }
+  }, [searchParams]);
 
   return (
     <div>
+      {partnersUpgradeModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Link
           href={`/${slug}/settings/billing`}
@@ -63,10 +78,10 @@ export function WorkspaceBillingUpgradePageClient() {
         <ToggleGroup
           options={[
             { label: "Monthly", value: "monthly" },
-            { label: "Yearly", value: "yearly" },
+            { label: "Yearly (2 months free)", value: "yearly" },
           ]}
           selected={period}
-          selectAction={(option) => setPeriod(option as "monthly" | "yearly")}
+          selectAction={(option) => setPeriod(option as "monthly" | "monthly")}
           className="rounded-lg border-neutral-300 bg-neutral-100 p-0.5"
           optionClassName="text-xs text-neutral-800 data-[selected=true]:text-neutral-800 px-3 sm:px-5 py-2 leading-none"
           indicatorClassName="bg-white border-neutral-200 rounded-md"
@@ -123,30 +138,29 @@ export function WorkspaceBillingUpgradePageClient() {
                       <h3 className="py-1 text-base font-semibold leading-none text-neutral-800">
                         {plan.name}
                       </h3>
-                      <div>
-                        <div className="relative mt-0.5 flex items-center gap-1">
-                          {plan.name === "Enterprise" ? (
-                            <span className="text-sm font-medium text-neutral-900">
-                              Custom
+                      <div className="relative mt-0.5 flex items-center gap-1">
+                        {plan.name === "Enterprise" ? (
+                          <span className="text-sm font-medium text-neutral-900">
+                            Custom
+                          </span>
+                        ) : (
+                          <>
+                            <NumberFlow
+                              value={plan.price[period]!}
+                              className="text-sm font-medium tabular-nums text-neutral-700"
+                              format={{
+                                style: "currency",
+                                currency: "USD",
+                                minimumFractionDigits: 0,
+                              }}
+                              continuous
+                            />
+                            <span className="text-sm font-medium text-neutral-400">
+                              per month
+                              {period === "yearly" && ", billed yearly"}
                             </span>
-                          ) : (
-                            <>
-                              <NumberFlow
-                                value={plan.price[period]!}
-                                className="text-sm font-medium tabular-nums text-neutral-700"
-                                format={{
-                                  style: "currency",
-                                  currency: "USD",
-                                  minimumFractionDigits: 0,
-                                }}
-                                continuous
-                              />
-                              <span className="text-sm font-medium text-neutral-400">
-                                per month
-                              </span>
-                            </>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-3">

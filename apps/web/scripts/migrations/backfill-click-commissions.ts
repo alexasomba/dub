@@ -1,4 +1,5 @@
 import { createId } from "@/lib/api/create-id";
+import { getProgramEnrollmentOrThrow } from "@/lib/api/programs/get-program-enrollment-or-throw";
 import { prisma } from "@dub/prisma";
 import "dotenv-flow/config";
 import { getAnalytics } from "../../lib/analytics/get-analytics";
@@ -8,10 +9,19 @@ async function main() {
   const programId = "prog_xxx";
   const partnerId = "pn_xxx";
 
-  const reward = await determinePartnerReward({
-    programId,
+  const programEnrollment = await getProgramEnrollmentOrThrow({
     partnerId,
+    programId,
+    include: {
+      partner: true,
+      links: true,
+      clickReward: true,
+    },
+  });
+
+  const reward = determinePartnerReward({
     event: "click",
+    programEnrollment,
   });
 
   const link = await prisma.link.findFirst({

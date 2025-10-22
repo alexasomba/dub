@@ -38,7 +38,7 @@ export const E2E_NO_ACCESS_FOLDER_LINK_ID = "link_1JP8FQE9VSVBG2G2Z6EBZWYF6"; //
 
 // Rewards specific
 export const E2E_CUSTOMER_EXTERNAL_ID_2 = "cus_pqc8qRtofpu6ZqvutyNDGAU2";
-export const E2E_REWARD = {
+export const E2E_SALE_REWARD = {
   id: "rw_1JYPP77NNDG6TVPAJDKNZREQN",
   event: "sale",
   amount: 1000,
@@ -54,6 +54,39 @@ export const E2E_REWARD = {
           value: "premiumProductId",
         },
       ],
+    },
+    {
+      operator: "AND",
+      amount: 5000,
+      conditions: [
+        {
+          entity: "sale",
+          attribute: "amount",
+          operator: "greater_than",
+          value: 15000,
+        },
+      ],
+    },
+  ],
+};
+export const E2E_LEAD_REWARD = {
+  id: "rw_1K82ESAT4YPY0STR20GKXZ7DR",
+  event: "lead",
+  amount: 1000,
+  modifiers: [
+    {
+      type: "flat",
+      amount: 200,
+      operator: "AND",
+      conditions: [
+        {
+          value: "US",
+          entity: "partner",
+          operator: "equals_to",
+          attribute: "country",
+        },
+      ],
+      maxDuration: null,
     },
   ],
 };
@@ -79,10 +112,15 @@ export const E2E_DISCOUNT = {
 export const E2E_PROGRAM = {
   id: "prog_CYCu7IMAapjkRpTnr8F1azjN",
   domain: "getacme.link",
-  url: "https://acme.dub.sh",
 };
 
 export const E2E_PARTNER = {
   id: "pn_H4TB2V5hDIjpqB7PwrxESoY3",
+  email: "steven@dub.co",
   tenantId: "4149092f-7265-4002-98d9-da9f8e67e1fb",
+};
+
+export const E2E_PARTNER_GROUP = {
+  id: "grp_1K2E25381GVMG7HHM057TB92F",
+  url: "https://acme.dub.sh/",
 };

@@ -1,6 +1,12 @@
-import { TrackLeadResponse, TrackSaleResponse } from "@/lib/types";
+import {
+  CommissionResponse,
+  Customer,
+  TrackLeadResponse,
+  TrackSaleResponse,
+} from "@/lib/types";
 import { randomCustomer } from "tests/utils/helpers";
-import { E2E_TRACK_CLICK_HEADERS } from "tests/utils/resource";
+import { HttpClient } from "tests/utils/http";
+import { E2E_LEAD_REWARD, E2E_TRACK_CLICK_HEADERS } from "tests/utils/resource";
 import { describe, expect, test } from "vitest";
 import { IntegrationHarness } from "../utils/integration";
 
@@ -16,15 +22,45 @@ const expectValidLeadResponse = ({
 }) => {
   expect(response.status).toEqual(200);
   expect(response.data).toStrictEqual({
-    clickId,
-    customerName: customer.name,
-    customerEmail: customer.email,
-    customerAvatar: customer.avatar,
     click: {
       id: clickId,
     },
+    link: response.data.link,
     customer,
   });
+};
+
+const verifyCommission = async ({
+  http,
+  customerExternalId,
+  expectedEarnings,
+}: {
+  http: HttpClient;
+  customerExternalId: string;
+  expectedEarnings: number;
+}) => {
+  // Find the customer first
+  const { data: customers } = await http.get<Customer[]>({
+    path: "/customers",
+    query: {
+      externalId: customerExternalId,
+    },
+  });
+
+  const customer = customers[0];
+
+  // Find the commission for the customer
+  const { status, data: commissions } = await http.get<CommissionResponse[]>({
+    path: "/commissions",
+    query: {
+      customerId: customer.id,
+    },
+  });
+
+  expect(status).toEqual(200);
+  expect(commissions).toHaveLength(1);
+  expect(commissions[0].customer?.id).toEqual(customer.id);
+  expect(commissions[0].earnings).toEqual(expectedEarnings);
 };
 
 describe("POST /track/lead", async () => {
@@ -67,7 +103,7 @@ describe("POST /track/lead", async () => {
     });
   });
 
-  test("duplicate request with same externalId", async () => {
+  test("duplicate track lead request with same customerExternalId", async () => {
     const response = await http.post<TrackLeadResponse>({
       path: "/track/lead",
       body: {
@@ -88,23 +124,35 @@ describe("POST /track/lead", async () => {
     });
   });
 
-  test("track a lead with eventQuantity", async () => {
+  test("track a lead with mode = 'deferred' + track it again after with mode = 'async' and no clickId", async () => {
     const customer2 = randomCustomer();
     const response = await http.post<TrackLeadResponse>({
       path: "/track/lead",
       body: {
         clickId: trackedClickId,
-        eventName: "Start Trial",
+        eventName: "Mode=Deferred Signup",
         customerExternalId: customer2.externalId,
         customerName: customer2.name,
         customerEmail: customer2.email,
         customerAvatar: customer2.avatar,
-        eventQuantity: 2,
+        mode: "deferred",
       },
     });
-
     expectValidLeadResponse({
       response,
+      customer: customer2,
+      clickId: trackedClickId,
+    });
+    // track the lead again, this time with mode = 'async' and no clickId
+    const response2 = await http.post<TrackLeadResponse>({
+      path: "/track/lead",
+      body: {
+        eventName: "Mode=Deferred Signup",
+        customerExternalId: customer2.externalId,
+      },
+    });
+    expectValidLeadResponse({
+      response: response2,
       customer: customer2,
       clickId: trackedClickId,
     });
@@ -143,17 +191,18 @@ describe("POST /track/lead", async () => {
     expect(saleResponse.status).toEqual(200);
   });
 
-  test("track a lead with `externalId` (backward compatibility)", async () => {
+  test("track a lead with eventQuantity", async () => {
     const customer4 = randomCustomer();
     const response = await http.post<TrackLeadResponse>({
       path: "/track/lead",
       body: {
         clickId: trackedClickId,
-        externalId: customer4.externalId,
-        eventName: "Signup",
+        eventName: "Start Trial",
+        customerExternalId: customer4.externalId,
         customerName: customer4.name,
         customerEmail: customer4.email,
         customerAvatar: customer4.avatar,
+        eventQuantity: 2,
       },
     });
 
@@ -164,13 +213,13 @@ describe("POST /track/lead", async () => {
     });
   });
 
-  test("track a lead with `customerId` (backward compatibility)", async () => {
+  test("track a lead with `externalId` (backward compatibility)", async () => {
     const customer5 = randomCustomer();
     const response = await http.post<TrackLeadResponse>({
       path: "/track/lead",
       body: {
         clickId: trackedClickId,
-        customerId: customer5.externalId,
+        externalId: customer5.externalId,
         eventName: "Signup",
         customerName: customer5.name,
         customerEmail: customer5.email,
@@ -182,6 +231,67 @@ describe("POST /track/lead", async () => {
       response,
       customer: customer5,
       clickId: trackedClickId,
+    });
+  });
+
+  test("track a lead with `customerId` (backward compatibility)", async () => {
+    const customer6 = randomCustomer();
+    const response = await http.post<TrackLeadResponse>({
+      path: "/track/lead",
+      body: {
+        clickId: trackedClickId,
+        customerId: customer6.externalId,
+        eventName: "Signup",
+        customerName: customer6.name,
+        customerEmail: customer6.email,
+        customerAvatar: customer6.avatar,
+      },
+    });
+
+    expectValidLeadResponse({
+      response,
+      customer: customer6,
+      clickId: trackedClickId,
+    });
+  });
+
+  test("track a lead and verify the reward based on the partner.country (US)", async () => {
+    const clickResponse = await http.post<{ clickId: string }>({
+      path: "/track/click",
+      headers: E2E_TRACK_CLICK_HEADERS,
+      body: {
+        domain: "getacme.link",
+        key: "marvin",
+      },
+    });
+
+    const trackedClickId = clickResponse.data.clickId;
+    const customer = randomCustomer();
+
+    const response = await http.post<TrackLeadResponse>({
+      path: "/track/lead",
+      body: {
+        clickId: trackedClickId,
+        customerId: customer.externalId,
+        eventName: "Signup",
+        customerName: customer.name,
+        customerEmail: customer.email,
+        customerAvatar: customer.avatar,
+      },
+    });
+
+    expectValidLeadResponse({
+      response,
+      customer: customer,
+      clickId: trackedClickId,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    await verifyCommission({
+      http,
+      customerExternalId: customer.externalId,
+      expectedEarnings: E2E_LEAD_REWARD.modifiers[0].amount,
     });
   });
 });

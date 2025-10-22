@@ -4,9 +4,11 @@ import {
   Check,
   Grid,
   Modal,
+  PLAN_FEATURE_ICONS,
   SimpleTooltipContent,
   Switch,
   Tooltip,
+  useRouterStuff,
 } from "@dub/ui";
 import { cn, INFINITY_NUMBER, nFormatter, PLANS } from "@dub/utils";
 import NumberFlow from "@number-flow/react";
@@ -15,7 +17,7 @@ import { Dispatch, ReactNode, SetStateAction, useMemo, useState } from "react";
 
 const defaultDescriptions = {
   Advanced:
-    "When you upgrade to Advanced, you'll get access to higher payout limits, advanced reward structures, white-labeling support, and more.",
+    "When you upgrade to Advanced, you'll get access to higher payout limits, advanced reward structures, embedded referral dashboard, and more.",
   Enterprise:
     "When you upgrade to Enterprise, you'll get access to unlimited payouts, unlimited partner groups, and more.",
 };
@@ -33,9 +35,11 @@ export function PartnersUpgradeModal({
   showPartnersUpgradeModal,
   setShowPartnersUpgradeModal,
 }: PartnersUpgradeModalProps) {
+  const { queryParams } = useRouterStuff();
+
   const plan = PLANS.find(({ name }) => name === planName)!;
 
-  const [isAnnual, setIsAnnual] = useState(true);
+  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
 
   const features = useMemo(
     () => [
@@ -65,18 +69,34 @@ export function PartnersUpgradeModal({
             },
           },
           {
-            id: "whitelabel",
-            text: "White-labeling support",
+            id: "embeddedreferrals",
+            text: "Embedded referral dashboard",
             tooltip: {
               title:
-                "Embed a white-labeled referral dashboard directly in your app in just a few lines of code.",
+                "Create an embedded referral dashboard directly in your app in just a few lines of code.",
               cta: "Learn more.",
-              href: "https://dub.co/docs/partners/white-labeling",
+              href: "https://dub.co/docs/partners/embedded-referrals",
             },
           },
           {
-            id: "groups",
+            id: "messages",
+            text: "Messaging center",
+            tooltip: {
+              title:
+                "Easily communicate with your partners using our messaging center.",
+              cta: "Learn more.",
+              href: "https://dub.co/help/article/messaging-partners",
+            },
+          },
+          {
+            id: "users",
             text: `${plan.limits.groups} partner groups`,
+            tooltip: {
+              title:
+                "Learn how you can create partner groups to segment partners by rewards, discounts, performance, location, and more.",
+              cta: "Learn more.",
+              href: "https://dub.co/help/article/partner-groups",
+            },
           },
           {
             id: "api",
@@ -95,7 +115,7 @@ export function PartnersUpgradeModal({
         ],
         Enterprise: [
           {
-            id: "groups",
+            id: "users",
             text: "Unlimited partner groups",
           },
           {
@@ -130,6 +150,7 @@ export function PartnersUpgradeModal({
     <Modal
       showModal={showPartnersUpgradeModal}
       setShowModal={setShowPartnersUpgradeModal}
+      onClose={() => queryParams({ del: "plan" })}
     >
       <div className="scrollbar-hide relative max-h-[calc(100dvh-50px)] overflow-y-auto p-4 sm:p-8">
         <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-[640px] -translate-x-1/2 [mask-image:linear-gradient(black,transparent_280px)] sm:block">
@@ -158,14 +179,16 @@ export function PartnersUpgradeModal({
                 <span
                   className={cn(
                     "text-xs font-semibold text-neutral-500 transition-colors",
-                    isAnnual && "text-neutral-600",
+                    period === "yearly" && "text-neutral-600",
                   )}
                 >
                   Yearly
                 </span>
                 <Switch
-                  checked={isAnnual}
-                  fn={setIsAnnual}
+                  checked={period === "yearly"}
+                  fn={() =>
+                    setPeriod(period === "yearly" ? "monthly" : "yearly")
+                  }
                   trackDimensions="radix-state-checked:bg-black focus-visible:ring-black/20 w-7 h-4"
                   thumbDimensions="size-3"
                   thumbTranslate="translate-x-3"
@@ -177,7 +200,7 @@ export function PartnersUpgradeModal({
           <div className="text-content-default mt-0.5 text-base font-medium tabular-nums">
             {plan.name !== "Enterprise" ? (
               <NumberFlow
-                value={plan.price[isAnnual ? "yearly" : "monthly"]!}
+                value={plan.price[period]!}
                 format={{
                   style: "currency",
                   currency: "USD",
@@ -191,25 +214,32 @@ export function PartnersUpgradeModal({
           </div>
           {plan.name !== "Enterprise" && (
             <span className="text-content-muted text-sm font-medium">
-              per month{isAnnual && ", billed yearly"}
+              per month{period === "yearly" && ", billed yearly"}
             </span>
           )}
 
           <div className="mt-6 flex flex-col gap-2 text-sm">
-            {features.map(({ id, text, tooltip }) => (
-              <li key={id} className="flex items-center gap-2 text-neutral-600">
-                <Check className="size-2.5 shrink-0 [&_*]:stroke-2" />
-                {tooltip ? (
-                  <Tooltip content={<SimpleTooltipContent {...tooltip} />}>
-                    <span className="cursor-help underline decoration-dotted underline-offset-2">
-                      {text}
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <p>{text}</p>
-                )}
-              </li>
-            ))}
+            {features.map(({ id, text, tooltip }) => {
+              const Icon =
+                id && PLAN_FEATURE_ICONS[id] ? PLAN_FEATURE_ICONS[id] : Check;
+              return (
+                <li
+                  key={id}
+                  className="flex items-center gap-2 text-neutral-600"
+                >
+                  <Icon className="size-3 shrink-0 [&_*]:stroke-2" />
+                  {tooltip ? (
+                    <Tooltip content={<SimpleTooltipContent {...tooltip} />}>
+                      <span className="cursor-help underline decoration-dotted underline-offset-2">
+                        {text}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    <p>{text}</p>
+                  )}
+                </li>
+              );
+            })}
           </div>
         </div>
 
@@ -217,7 +247,7 @@ export function PartnersUpgradeModal({
           {plan.name !== "Enterprise" ? (
             <UpgradePlanButton
               plan={plan.name.toLowerCase()}
-              period={isAnnual ? "yearly" : "monthly"}
+              period={period}
               text={`Continue with ${plan.name}`}
               variant="primary"
             />
@@ -236,7 +266,10 @@ export function PartnersUpgradeModal({
           <Button
             text="Maybe later"
             variant="secondary"
-            onClick={() => setShowPartnersUpgradeModal(false)}
+            onClick={() => {
+              setShowPartnersUpgradeModal(false);
+              queryParams({ del: "plan" });
+            }}
           />
         </div>
       </div>

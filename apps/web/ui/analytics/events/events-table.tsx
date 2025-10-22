@@ -12,6 +12,7 @@ import {
   EditColumnsButton,
   LinkLogo,
   Table,
+  TimestampTooltip,
   Tooltip,
   useColumnVisibility,
   usePagination,
@@ -184,21 +185,15 @@ export default function EventsTable({
           enableHiding: false,
           size: 160,
           cell: ({ getValue }) => (
-            <Tooltip
-              content={getValue().toLocaleTimeString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
-                second: "numeric",
-                hour12: true,
-              })}
+            <TimestampTooltip
+              timestamp={getValue()}
+              side="right"
+              rows={["local", "utc", "unix"]}
             >
-              <div className="w-full truncate">
+              <span className="select-none truncate">
                 {formatDateTimeSmart(getValue())}
-              </div>
-            </Tooltip>
+              </span>
+            </TimestampTooltip>
           ),
         },
         // Sale amount
@@ -211,8 +206,6 @@ export default function EventsTable({
             <div className="flex items-center gap-2">
               <span>
                 {currencyFormatter(getValue() / 100, {
-                  maximumFractionDigits: undefined,
-                  // @ts-ignore – trailingZeroDisplay is a valid option but TS is outdated
                   trailingZeroDisplay: "stripIfInteger",
                 })}
               </span>

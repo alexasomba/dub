@@ -35,9 +35,7 @@ export const GET = withWorkspace(
               }),
             },
             every: {
-              status: status || {
-                in: ["approved", "invited"],
-              },
+              status,
             },
           },
           ...commonWhere,
@@ -70,6 +68,11 @@ export const GET = withWorkspace(
           },
         },
         _count: true,
+        orderBy: {
+          _count: {
+            status: "desc",
+          },
+        },
       });
 
       // Find missing statuses
@@ -81,9 +84,6 @@ export const GET = withWorkspace(
       missingStatuses.forEach((status) => {
         partners.push({ _count: 0, status });
       });
-
-      // order by count
-      partners.sort((a, b) => (b._count ?? 0) - (a._count ?? 0));
 
       return NextResponse.json(partners);
     }
@@ -100,11 +100,14 @@ export const GET = withWorkspace(
             }),
             ...commonWhere,
           },
-          status: status || {
-            in: ["approved", "invited"],
-          },
+          status,
         },
         _count: true,
+        orderBy: {
+          _count: {
+            groupId: "desc",
+          },
+        },
       });
 
       return NextResponse.json(partners);
@@ -114,9 +117,7 @@ export const GET = withWorkspace(
     const count = await prisma.programEnrollment.count({
       where: {
         programId,
-        status: status || {
-          in: ["approved", "invited"],
-        },
+        status,
         ...(groupId && {
           groupId,
         }),

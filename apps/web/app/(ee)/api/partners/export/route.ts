@@ -13,6 +13,10 @@ const columnIdToLabel = exportPartnerColumns.reduce((acc, column) => {
   return acc;
 }, {});
 
+const numericColumns = exportPartnerColumns
+  .filter((column) => column.numeric)
+  .map((column) => column.id);
+
 // GET /api/partners/export – export partners to CSV
 export const GET = withWorkspace(
   async ({ searchParams, workspace }) => {
@@ -23,7 +27,7 @@ export const GET = withWorkspace(
     const partners = await getPartners({
       ...filters,
       page: 1,
-      pageSize: 5000,
+      pageSize: 10000,
       programId,
     });
 
@@ -38,7 +42,7 @@ export const GET = withWorkspace(
 
     const schemaFields = {};
     columns.forEach((column) => {
-      if (["clicks", "leads", "sales", "saleAmount"].includes(column)) {
+      if (numericColumns.includes(column)) {
         schemaFields[columnIdToLabel[column]] = z.coerce
           .number()
           .optional()
@@ -55,13 +59,17 @@ export const GET = withWorkspace(
       const result = {};
 
       columns.forEach((column) => {
-        if (column === "payoutsEnabledAt" || column === "createdAt") {
-          result[columnIdToLabel[column]] = partner[column]
-            ? new Date(partner[column]).toISOString()
-            : "";
-        } else {
-          result[columnIdToLabel[column]] = partner[column] || "";
+        let value = partner[column] || "";
+
+        // Handle date fields - convert to ISO string format
+        if (
+          (column === "createdAt" || column === "payoutsEnabledAt") &&
+          value instanceof Date
+        ) {
+          value = value.toISOString();
         }
+
+        result[columnIdToLabel[column]] = value;
       });
 
       return z.object(schemaFields).parse(result);
@@ -70,7 +78,7 @@ export const GET = withWorkspace(
     return new Response(convertToCSV(formattedPartners), {
       headers: {
         "Content-Type": "text/csv",
-        "Content-Disposition": `attachment`,
+        "Content-Disposition": "attachment",
       },
     });
   },

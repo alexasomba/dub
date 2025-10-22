@@ -19,6 +19,7 @@ import {
   MenuItem,
   Popover,
   Table,
+  TimestampTooltip,
   useColumnVisibility,
   useCopyToClipboard,
   usePagination,
@@ -161,8 +162,6 @@ export function CustomerTable() {
             <div className="flex items-center gap-2">
               <span>
                 {currencyFormatter(getValue() / 100, {
-                  maximumFractionDigits: undefined,
-                  // @ts-ignore – trailingZeroDisplay is a valid option but TS is outdated
                   trailingZeroDisplay: "stripIfInteger",
                 })}
               </span>
@@ -173,7 +172,18 @@ export function CustomerTable() {
         {
           id: "createdAt",
           header: "Created",
-          accessorFn: (d) => formatDate(d.createdAt, { month: "short" }),
+          cell: ({ row }) => (
+            <TimestampTooltip
+              timestamp={row.original.createdAt}
+              rows={["local"]}
+              side="left"
+              delayDuration={150}
+            >
+              <span>
+                {formatDate(row.original.createdAt, { month: "short" })}
+              </span>
+            </TimestampTooltip>
+          ),
         },
         {
           id: "link",
@@ -295,6 +305,7 @@ export function CustomerTable() {
                 <Filter.List
                   filters={filters}
                   activeFilters={activeFilters}
+                  onSelect={onSelect}
                   onRemove={onRemove}
                   onRemoveAll={onRemoveAll}
                 />
@@ -369,7 +380,7 @@ export function CustomerTable() {
               : "No customers have been recorded for your workspace yet. Learn how to track your first customer."
           }
           {...(!isFiltered && {
-            learnMoreHref: `/${workspaceSlug}/guides`,
+            learnMoreHref: `/${workspaceSlug}/settings/analytics`,
             learnMoreTarget: "_self",
             learnMoreText: "Read the guides",
           })}

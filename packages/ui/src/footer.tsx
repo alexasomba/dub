@@ -80,15 +80,19 @@ const navigation = {
     { name: "Customers", href: "/customers" },
     { name: "Brand", href: "/brand" },
     { name: "Contact", href: "/contact" },
+    { name: "Privacy", href: "/privacy" },
   ],
   compare: COMPARE_PAGES.map(({ name, slug }) => ({
     name,
     href: `/compare/${slug}`,
     product: "links",
   })).concat(
-    ["Rewardful", "PartnerStack", "Tolt"].map((name) => ({
+    ["Rewardful", "PartnerStack", "FirstPromoter", "Tolt"].map((name) => ({
       name,
-      href: `/help/article/migrating-from-${name.toLowerCase()}`,
+      href:
+        name === "Rewardful"
+          ? "/blog/dub-vs-rewardful"
+          : `/help/article/migrating-from-${name.toLowerCase()}`,
       product: "partners",
     })),
   ),

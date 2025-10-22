@@ -1,12 +1,10 @@
 import { handleAndReturnErrorResponse } from "@/lib/api/errors";
 import { verifyVercelSignature } from "@/lib/cron/verify-vercel";
-import { resend } from "@dub/email/resend";
-import { VARIANT_TO_FROM_MAP } from "@dub/email/resend/constants";
+import { sendBatchEmail } from "@dub/email";
 import DomainRenewalReminder from "@dub/email/templates/domain-renewal-reminder";
 import { prisma } from "@dub/prisma";
 import { chunk, log } from "@dub/utils";
 import {
-  addDays,
   differenceInCalendarDays,
   endOfDay,
   formatDistanceStrict,
@@ -82,7 +80,9 @@ export async function GET(req: Request) {
     const reminderDomains = domains.flatMap(
       ({ slug, expiresAt, renewalFee, project }) => {
         const reminderWindow = differenceInCalendarDays(expiresAt, now);
-        const chargeAt: Date = addDays(now, reminderWindow);
+
+        // we charge 14 days before the expiration date to ensure timely processing
+        const chargeAt: Date = subDays(expiresAt, 14);
 
         return project.users.map(({ user }) => ({
           domain: {
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
             expiresAt,
             reminderWindow,
             chargeAt,
-            chargeInText: formatDistanceStrict(chargeAt, now),
+            chargeAtInText: formatDistanceStrict(chargeAt, now),
           },
           workspace: {
             slug: project.slug,
@@ -108,9 +108,8 @@ export async function GET(req: Request) {
     const reminderDomainsChunks = chunk(reminderDomains, 100);
 
     for (const reminderDomainsChunk of reminderDomainsChunks) {
-      const res = await resend?.batch.send(
+      const res = await sendBatchEmail(
         reminderDomainsChunk.map(({ workspace, user, domain }) => ({
-          from: VARIANT_TO_FROM_MAP.notifications,
           to: user.email!,
           subject: "Your domain is expiring soon",
           variant: "notifications",
