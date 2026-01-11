@@ -34,8 +34,8 @@
 - [ ] T007 Create Workers env validation helper in apps/web/lib/workers/env.ts (Zod-validated bindings/secrets)
 - [ ] T008 [P] Add Workers runtime helpers (geo/ip/waitUntil) in apps/web/lib/workers/runtime.ts
 - [ ] T009 Implement D1 client wrapper in apps/web/lib/d1/client.ts
-- [ ] T010 [P] Add D1 migration folder and README in apps/web/d1/migrations/README.md
-- [ ] T011 Add initial D1 schema migration for core redirect flow in apps/web/d1/migrations/0001_core.sql
+- [ ] T010 [P] Add D1 migration folder and README in apps/web/d1/migrations/README.md (conventions: snake_case tables; ISO-8601 `TEXT` timestamps; `updated_at` triggers; JSON stored as `TEXT`)
+- [ ] T011 Add initial D1 schema migration for core redirect flow in apps/web/d1/migrations/0001_core.sql (create `projects`, `domains`, `links` with: `projects(id, slug UNIQUE, name, plan, created_at, updated_at)`; `domains(id, slug UNIQUE, project_id, verified, archived, primary, not_found_url, expired_url, created_at, updated_at, FOREIGN KEY(project_id)->projects.id)`; `links(id, domain, key, url, short_link UNIQUE, project_id, archived, expires_at, expired_url, disabled_at, password, track_conversion, proxy, clicks, last_clicked, created_at, updated_at, UNIQUE(domain,key), FOREIGN KEY(domain)->domains.slug, FOREIGN KEY(project_id)->projects.id)`; add indexes `links(domain,key)`, `links(project_id)`, `domains(project_id)`)
 - [ ] T012 Wire D1 migrations_dir + DB binding in apps/web/wrangler.toml
 - [ ] T013 Implement Analytics Engine writer wrapper in apps/web/lib/analytics/wae/write.ts
 - [ ] T014 [P] Define Analytics Engine event mapping for clicks in apps/web/lib/analytics/wae/click-event.ts
@@ -89,8 +89,8 @@
 ### Implementation
 
 - [ ] T032 [US2] Identify and remove/replace `export const runtime = "edge"` where incompatible with OpenNext on Workers (start with apps/web/app/api/providers/route.ts)
-- [ ] T033 [US2] Add D1 schema migration for auth + workspace membership in apps/web/d1/migrations/0002_auth.sql
-- [ ] T034 [US2] Add D1 schema migration for link management tables/indexes in apps/web/d1/migrations/0003_links.sql
+- [ ] T033 [US2] Add D1 schema migration for auth + workspace membership in apps/web/d1/migrations/0002_auth.sql (create `users`, `accounts`, `sessions`, `verification_tokens`, `email_verification_tokens`, `password_reset_tokens`, `project_users`, `project_invites`, `tokens`, `restricted_tokens` mirroring Prisma fields minimally: `users(id, email UNIQUE, name, image, password_hash, email_verified, invalid_login_attempts, locked_at, default_workspace, created_at, updated_at)`; `accounts(user_id, provider, provider_account_id, type, access_token, refresh_token, expires_at, id_token, UNIQUE(provider,provider_account_id))`; `sessions(session_token UNIQUE, user_id, expires)`; token tables include `hashed_key UNIQUE`, `partial_key`, `user_id`, optional `project_id` and `scopes`; membership tables enforce UNIQUE(user_id,project_id) and UNIQUE(email,project_id))
+- [ ] T034 [US2] Add D1 schema migration for link management tables/indexes in apps/web/d1/migrations/0003_links.sql (expand `links`/`domains` to support dashboard/API fields used in `Link`/`Domain` Prisma models: OG fields, UTM fields, device targeting (`ios`,`android`,`geo`), `rewrite`, `public_stats`, counters (`leads`,`conversions`,`sales`,`sale_amount`), `folder_id`,`tenant_id`,`external_id`; add indexes needed by common list queries: `links(project_id, folder_id, archived, created_at DESC)`, `links(project_id, tenant_id)`, `links(project_id, url)` and keep UNIQUE(domain,key) + UNIQUE(short_link))
 - [ ] T035 [P] [US2] Implement D1-backed workspace membership query in apps/web/lib/d1/queries/get-workspace-membership.ts
 - [ ] T036 [P] [US2] Implement D1-backed token lookup (hashed key) in apps/web/lib/d1/queries/get-api-token.ts
 - [ ] T037 [US2] Add Workers-compatible rate limiting adapter in apps/web/lib/auth/rate-limit-request.ts (swap Upstash for Durable Object)
