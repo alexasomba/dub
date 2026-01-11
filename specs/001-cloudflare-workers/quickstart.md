@@ -32,7 +32,7 @@ This quickstart describes the target operator experience for deploying Dub to **
 
 ## 2) Configure Wrangler bindings
 
-Add required bindings to `wrangler.toml` (or `wrangler.jsonc`) at the deploy root:
+Add required bindings to `wrangler.jsonc` at the deploy root:
 
 - D1 binding (example): `DB`
 - Analytics Engine binding (example): `ANALYTICS`

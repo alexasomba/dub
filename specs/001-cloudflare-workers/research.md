@@ -31,7 +31,7 @@ Cloudflare’s guide uses an OpenNext build output layout like:
 - Worker entry: `.open-next/worker.js`
 - Static assets: `.open-next/assets`
 
-Add `wrangler.toml` (or `wrangler.jsonc` latest and prefered) at the deploy root with:
+Add `wrangler.jsonc` at the deploy root with:
 - `main = ".open-next/worker.js"`
 - `assets = { directory = ".open-next/assets", binding = "ASSETS" }`
 - `compatibility_flags = ["nodejs_compat"]`
@@ -49,7 +49,7 @@ directory = ".open-next/assets"
 binding = "ASSETS"
 ```
 
-Bindings (D1/KV/R2/DO/etc.) are declared in the same `wrangler.toml` and become available to the app via the OpenNext context APIs (see “Bindings” section below).
+Bindings (D1/KV/R2/DO/etc.) are declared in the same `wrangler.jsonc` and become available to the app via the OpenNext context APIs (see “Bindings” section below).
 
 ### C. OpenNext adapter configuration
 Create `open-next.config.ts` at the deploy root:
@@ -65,7 +65,7 @@ This file is also where you configure caching behavior (ISR/data cache) using th
 Cloudflare’s guide recommends these scripts (names can vary, but keep the same underlying commands):
 - `preview`: `opennextjs-cloudflare build && opennextjs-cloudflare preview`
 - `deploy`: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`
-- `cf-typegen`: `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`
+- `cf-typegen`: `wrangler types`
 
 Notes:
 - `opennextjs-cloudflare build` runs `next build` and then transforms the output into the `.open-next/` Worker+assets format.
@@ -86,7 +86,7 @@ This matters for Next specifically because build-time evaluation (SSG, config in
 OpenNext provides a way to access Worker bindings (D1/KV/R2/DO, plus `cf` and `ctx`) from inside route handlers/server code.
 
 Also recommended:
-- Generate binding types with `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts` and include them in TS config.
+- Generate binding types with `wrangler types` and include them in TS config.
 
 ### H. Output artifacts (what gets deployed)
 - `.open-next/worker.js`: the Worker entry module used by `wrangler deploy`.

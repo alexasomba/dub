@@ -45,7 +45,7 @@
 ## Edge Case Coverage
 
 - [x] CHK022 Are requirements defined for rate limiting observability (how operators know limits are triggering, minimum headers or log markers, and whether user messaging is standardized)? [Gap, Spec §Edge Cases]
-- [x] CHK023 Are requirements defined for platform limit breaches (execution time, payload, concurrency) that include both user-facing responses and operator-facing diagnostics)? [Completeness, Spec §Edge Cases]
+- [x] CHK023 Are requirements defined for platform limit breaches (execution time, payload, concurrency) that include both user-facing responses and operator-facing diagnostics? [Completeness, Spec §Edge Cases]
 - [x] CHK024 Are requirements defined for regional consistency anomalies that include operator guidance (how to identify, how to mitigate, expected eventual consistency bounds)? [Ambiguity, Spec §Edge Cases]
 
 ## Non-Functional Requirements

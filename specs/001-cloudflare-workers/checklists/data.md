@@ -21,7 +21,7 @@
 - [x] CHK008 Are tenant isolation requirements expressed as concrete data invariants at the storage layer (e.g., “every tenant-owned row includes `project_id`; queries MUST filter by it”), not only as general policy? [Clarity, Plan §Gate 1, Spec §FR-005, Tasks §Terminology]
 - [x] CHK009 Are requirements clear about identifier types and formats in D1 (IDs, slugs, timestamps, JSON-as-text), and are they consistent across migrations? [Clarity, Tasks §T010]
 - [x] CHK010 Are requirements clear about read-after-write expectations and consistency bounds for D1 (especially for “create link → immediate redirect”)? [Ambiguity, Spec §US2, Spec §Edge Cases]
-- [x] CHK011 Are requirements clear about how counters are maintained (atomicity, correctness under concurrency) for click counts and related fields, and what level of accuracy is required? [Gap, Tasks §T027]
+- [x] CHK011 Are requirements clear about how counters are maintained (atomicity, correctness under concurrency) for click counts and what level of accuracy is required? [Gap, Tasks §T027]
 
 ## Requirement Consistency
 

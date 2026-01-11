@@ -93,8 +93,8 @@ apps/
   ├── middleware.ts
   ├── vitest.config.ts
   ├── open-next.config.ts      # (planned) OpenNext Cloudflare adapter config
-  ├── wrangler.toml            # (planned) Workers deployment config + bindings
-  └── cloudflare-env.d.ts      # (planned) generated binding types
+  ├── wrangler.jsonc            # (planned) Workers deployment config + bindings
+  └── worker-configuration.d.ts      # (planned) generated binding types
 
 packages/
 ├── prisma/                      # Existing Prisma schema reference (source-of-truth model)

@@ -5,6 +5,7 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
+    "types": [],
     "baseUrl": ".",
     "paths": {
       "@/pages/*": ["pages/*"],
@@ -32,6 +33,7 @@
   },
   "include": [
     "next-env.d.ts",
+    "worker-configuration.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
