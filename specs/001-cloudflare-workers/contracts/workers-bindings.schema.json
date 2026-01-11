@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dub.co/contracts/workers-bindings.schema.json",
+  "title": "Dub Workers Deployment Bindings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["DB", "ANALYTICS", "RATE_LIMITER", "NEXTAUTH_SECRET"],
+  "properties": {
+    "DB": {
+      "description": "Cloudflare D1 binding (authoritative primary database)",
+      "type": "string",
+      "minLength": 1
+    },
+    "ANALYTICS": {
+      "description": "Workers Analytics Engine dataset binding",
+      "type": "string",
+      "minLength": 1
+    },
+    "RATE_LIMITER": {
+      "description": "Durable Object namespace binding for rate limiting",
+      "type": "string",
+      "minLength": 1
+    },
+    "ASSETS": {
+      "description": "Workers Assets binding (OpenNext output)",
+      "type": "string"
+    },
+    "NEXTAUTH_SECRET": {
+      "description": "Application auth secret (stored as a Wrangler secret)",
+      "type": "string",
+      "minLength": 16
+    },
+    "NEXTAUTH_URL": {
+      "description": "Public base URL for auth callbacks",
+      "type": "string",
+      "format": "uri"
+    },
+    "STRIPE_SECRET_KEY": {
+      "description": "Stripe secret key (optional if billing disabled)",
+      "type": "string"
+    },
+    "RESEND_API_KEY": {
+      "description": "Resend API key (optional if email disabled)",
+      "type": "string"
+    }
+  }
+}

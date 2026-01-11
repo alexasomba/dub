@@ -14,8 +14,15 @@ All API inputs MUST be validated with Zod schemas in `lib/zod/schemas/`. Route h
 ### IV. Auth Middleware Enforcement
 API routes MUST wrap handlers with `withWorkspace()` or `withSession()` auth middleware. Middleware resolves user identity via `getUserViaToken()` (lib/auth/). Workspace access checked via `projectUsers` join table. Role-based permissions (e.g., `"links.read"`, `"folders.write"`, `"tokens.manage"`) configured in `withWorkspace()` + `requiredPermissions` array. Plan-based restrictions (business, enterprise) enforced for premium features.
 
-### V. Edge-Optimized Queries
-Tinybird for analytics; PlanetScale for primary database; Upstash Redis for caching. Edge routes use read-only `lib/planetscale/` client (NOT full Prisma). Full Prisma reserved for server-side mutations in `apps/web/app/api/`. Middleware runs on Edge runtime for performance-critical hostname/path routing.
+### V. Runtime Compatibility & Platform-Optimized Data Access
+Dub optimizes for edge performance and must remain portable across runtimes.
+
+- Prefer Web Platform APIs for edge/runtime-critical paths.
+- Avoid database clients that require native Node binaries in edge runtimes.
+
+**Current default deployment** uses PlanetScale (primary DB), Tinybird (analytics), and Upstash Redis (cache/rate limiting), with edge reads via `lib/planetscale/` (not full Prisma).
+
+**Workers-only deployments** MUST use Workers-compatible storage and clients (e.g., D1 for primary DB, Workers Analytics Engine for analytics, Durable Objects for strong-consistency state) and MUST NOT depend on Prisma in the Workers runtime.
 
 ### VI. Testing Discipline
 Unit tests via Vitest (`apps/web/vitest.config.ts`). E2E tests in `.github/workflows/e2e.yaml`. New API endpoints require contract tests; mutations require integration tests. Coverage expectations: critical paths (auth, payments, workspace isolation) ≥80%. Tests unblock features; untested = unreviewable.
@@ -59,9 +66,10 @@ EE features (SSO/SAML via BoxyHQ, fraud detection, affiliate programs, custom do
 6. PR must verify: isolation filters, input validation, auth checks, test coverage
 
 ### Database Changes
-- Push schema changes via `pnpm prisma:push` (no migration files)
-- Inspect with `pnpm prisma:studio` on localhost:5555
-- All writes via Prisma in `apps/web/app/api/`; reads on edge use `lib/planetscale/`
+- Push schema changes via `pnpm prisma:push` (no migration files) for the default PlanetScale/Prisma deployment.
+- Inspect with `pnpm prisma:studio` on localhost:5555.
+- All writes via Prisma in `apps/web/app/api/`; reads on edge use `lib/planetscale/`.
+- For Workers-only hosting, use D1 migrations and Workers-compatible SQL access; do not use Prisma in the Workers runtime.
 
 ## Governance
 
@@ -76,4 +84,4 @@ EE features (SSO/SAML via BoxyHQ, fraud detection, affiliate programs, custom do
 
 **Compliance verification**: Code reviews check for `workspace` filters, auth middleware, Zod validation, and test coverage before approval. Violations of I, III, or IV are release blockers.
 
-**Version**: 1.0.0 | **Ratified**: 2026-01-11 | **Last Amended**: 2026-01-11
+**Version**: 1.1.0 | **Ratified**: 2026-01-11 | **Last Amended**: 2026-01-11

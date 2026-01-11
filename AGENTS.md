@@ -6,6 +6,16 @@ Dub is an open-source link attribution platform built on a monorepo architecture
 
 **Key Tech Stack**: Next.js 15, TypeScript, Tailwind, Prisma ORM, PlanetScale, Upstash Redis, Tinybird (analytics), NextAuth.js
 
+## Deployment Targets (Important)
+
+- **Default deployment target (today)**: Node/edge hybrid running the existing stack (PlanetScale + Prisma, Tinybird analytics, Upstash Redis).
+- **Workers-only hosting (planned/experimental)**: A feature spec/plan exists to run the full app on Cloudflare Workers using OpenNext, with Cloudflare-native replacements (D1, Workers Analytics Engine, Durable Objects). See `specs/001-cloudflare-workers/`.
+
+## Agent Guidance Files
+
+- This file (`AGENTS.md`) is the human-oriented “handbook” for repo conventions and architecture.
+- `.github/agents/copilot-instructions.md` is a short, agent-oriented prompt file (auto-generated from feature plans, with an optional manual section). It should not replace this document; it exists to keep AI edits aligned with the repo.
+
 ## Monorepo Structure
 
 - **`apps/web/`** – Main Next.js 15 application (short link redirect, dashboard, API)

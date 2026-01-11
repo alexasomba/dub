@@ -1,0 +1,49 @@
+openapi: 3.1.2
+info:
+  title: Dub Workers Hosting - Operational Endpoints
+  version: 0.1.0
+  description: |
+    Operational endpoints intended for self-hosted deployments of Dub on Cloudflare Workers.
+    These endpoints support deployment validation and troubleshooting.
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: example.com
+paths:
+  /api/health:
+    get:
+      summary: Basic health check
+      description: Returns process-level health and minimal runtime info.
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  runtime:
+                    type: string
+                    description: Runtime identifier (workers)
+        "500":
+          description: Unhealthy
+  /api/_internal/compat:
+    get:
+      summary: Compatibility report
+      description: |
+        Returns a compatibility matrix snapshot for the current deployment.
+        Intended for operators; may be protected in production.
+      responses:
+        "200":
+          description: Compatibility report
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
