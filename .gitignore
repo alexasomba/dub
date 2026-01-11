@@ -25,6 +25,10 @@ dist/
 # vercel
 .vercel
 
+# cloudflare workers (opennext + wrangler)
+apps/web/.open-next/
+apps/web/.wrangler/
+
 # tinybird
 .venv
 .tinyb

@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "concurrently --kill-others \"pnpm prisma:generate && next dev --turbopack --port 8888\" \"pnpm prisma:generate && pnpm prisma:studio --browser none\"",
     "build": "pnpm prisma:generate && next build",
+    "workers:build": "opennextjs-cloudflare build",
+    "workers:typegen": "wrangler types",
+    "workers:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "workers:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "lint": "next lint",
     "start": "next start",
     "script": "tsx ./scripts/run.ts",

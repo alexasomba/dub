@@ -1,0 +1,50 @@
+{
+  "name": "dub-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-11-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NEXTJS_ENV": "production",
+    // Used to gate operator-only endpoints like /api/_internal/compat
+    "OPERATOR_TOKEN": "REPLACE_ME"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dub",
+      "database_id": "REPLACE_ME",
+      "migrations_dir": "d1/migrations"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "dub"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimitDO"
+      },
+      {
+        "name": "CLICK_CACHE",
+        "class_name": "ClickCacheDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["RateLimitDO", "ClickCacheDO"]
+    }
+  ]
+}
