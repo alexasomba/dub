@@ -88,6 +88,199 @@ As an operator, I want any non-compatible dependencies or integrations to be rep
 - Regional consistency issues (eventual consistency or propagation delays) impacting reads after writes.
 - Unexpected third-party integration outages (must not break redirects; should isolate failures).
 
+## Operational Requirements
+
+### Operational Endpoints
+
+- The system MUST expose `/api/health` as a stable health check endpoint.
+  - **Minimum response shape** on success: `{ "status": "ok", "runtime": "workers" }`.
+  - The endpoint MUST be safe to call frequently and MUST NOT require access to external dependencies to return a healthy response (process-level health).
+- The system MUST expose `/api/_internal/compat` as an operator-facing compatibility report endpoint.
+  - The endpoint MUST include a compatibility matrix snapshot (see “Compatibility Matrix”).
+  - The endpoint MUST be treated as operator-only in production.
+  - The endpoint MUST be disabled by default unless an operator secret is configured.
+  - When enabled, the endpoint MUST require an operator secret, supplied as `X-Operator-Token: <token>`.
+  - When disabled or when the operator token is invalid/missing, the endpoint MUST respond `404`.
+
+### Compatibility Matrix
+
+- The system MUST provide an operator-facing compatibility matrix (via `/api/_internal/compat` and documented in the Workers quickstart) covering major integrations.
+- The matrix MUST include (at minimum): PlanetScale/Prisma, Tinybird, Upstash Redis.
+- For each integration, the matrix MUST include:
+  - `status`: one of `supported`, `replaced`, `disabled`
+  - `replacement` (if `replaced`): the Cloudflare-native substitute (D1, Analytics Engine, Durable Objects)
+  - `notes`: operator-facing guidance (what works, what does not, and why)
+- The `/api/_internal/compat` response MUST include:
+  - `runtime`: `workers`
+  - `contractVersion`: the OpenAPI version from `specs/001-cloudflare-workers/contracts/workers-hosting.openapi.yaml`
+  - `integrations`: a map keyed by integration identifier (e.g., `planetscalePrisma`, `tinybird`, `upstashRedis`)
+
+### Automated Deployment Validation Evidence (SC-004)
+
+- “Automated deployment validation” MUST include an automated smoke check that:
+  - Builds the Workers artifact.
+  - Starts a Workers preview environment.
+  - Verifies `/api/health` responds `200` with the minimum response shape.
+  - Verifies `/api/_internal/compat` responds `200` (when enabled) and reports `replaced/disabled/supported` statuses.
+  - Fails with actionable diagnostics if runtime-incompatible capabilities are required.
+- Automated validation MUST also validate the OpenAPI contract file (`specs/001-cloudflare-workers/contracts/workers-hosting.openapi.yaml`) for syntactic correctness.
+
+## Redirect Behavior Requirements
+
+The system MUST preserve the current Dub redirect semantics as closely as possible, and MUST meet the minimum behaviors below.
+
+### Common Redirect Requirements
+
+- For a standard, valid short link, the system MUST respond with an HTTP redirect and a `Location` header.
+- Default redirect status MUST be `302` unless a link is explicitly configured as permanent, in which case it MUST be `301`.
+- Redirect responses SHOULD be `Cache-Control: no-store` by default unless the link/domain explicitly enables caching.
+
+### Redirect Variants (Minimum Behaviors)
+
+- **Not found** (unknown key/domain):
+  - If the domain has a configured `not_found_url`, respond `302` redirecting to it.
+  - Otherwise respond `404` with a minimal, non-sensitive response.
+- **Disabled link** (archived or disabled):
+  - Treat as not found (same behavior as above). The response MUST NOT reveal whether the link exists in another workspace.
+- **Expired link**:
+  - If the link has `expired_url`, redirect (`302`) to it.
+  - Else if the domain has `expired_url`, redirect (`302`) to it.
+  - Otherwise treat as not found.
+- **Password-protected link**:
+  - Must not redirect until the correct password is provided.
+  - If the current UI flow is supported, the system MUST render the existing password prompt experience.
+  - Otherwise, respond `401` with a minimal response that does not disclose link ownership.
+- **Proxy/cloaked mode**:
+  - Workers-only hosting MUST support normal redirect mode.
+  - If proxy/cloaked mode is not supported in Workers for a given link, the system MUST fall back to normal redirect mode and MUST log a single warning-level event.
+
+## Security Requirements
+
+### Tenant Isolation
+
+- **Terminology**: In this repository, a “workspace” maps to the Prisma `Project` model and is represented by `project_id` in D1.
+- “Workspace isolation” MUST be enforced as an explicit, testable invariant:
+  - No request (public redirect or authenticated API) may read, infer, or modify data belonging to a different `project_id`.
+  - All tenant-owned D1 tables MUST include a `project_id` column.
+  - All D1 queries for tenant-owned data MUST include `project_id` in the predicate (no implicit scoping).
+- Tenant isolation MUST cover:
+  - Redirect resolution (`domain` + `key`)
+  - Click recording and counters
+  - Authenticated link CRUD operations
+  - Analytics event ingest and analytics visibility
+
+### Authentication & Authorization
+
+- The Workers-hosted deployment MUST support authenticated access for the dashboard and API.
+- **Session (dashboard)**:
+  - Authentication MUST use a server-issued session.
+  - The session MUST persist across navigation.
+  - Session cookies MUST be `HttpOnly` and `Secure` in production, and MUST use `SameSite=Lax` (or stricter).
+- **API tokens (API consumers)**:
+  - Authentication MUST support `Authorization: Bearer <token>`.
+  - Tokens MUST be stored as hashes at rest (no plaintext token storage).
+  - Token lookup MUST be workspace-scoped when applicable (e.g., restricted tokens).
+- Token lifecycle requirements:
+  - Tokens MUST be revocable and revocation MUST take effect immediately.
+  - Restricted tokens MUST support explicit scopes, and scopes MUST be enforced.
+- **Authorization policy**:
+  - Authorization MUST be based on membership (`project_users`) and role/permissions.
+  - Requests MUST distinguish unauthenticated (`401`) from unauthorized (`403`) for authenticated routes.
+  - Cross-workspace access MUST respond as `404` for resource reads to avoid leaking existence.
+
+### Secrets and Sensitive Data
+
+- Secrets MUST NOT be embedded in build artifacts.
+- Logs and telemetry MUST redact secrets and tokens and SHOULD avoid storing raw IP addresses or other PII.
+- `/api/_internal/compat` MUST be operator-only in production; by default it MUST be disabled unless an operator secret is configured.
+
+### Brute-force and Lockout
+
+- The system MUST provide brute-force protection for sign-in.
+  - Default behavior: after 10 consecutive invalid sign-in attempts, lock the account for 15 minutes.
+  - Lockout MUST be observable in logs (without leaking credentials).
+
+### Abuse Prevention
+
+- Public redirect endpoints MUST be rate limited.
+  - Default actor key: client IP.
+  - Default policy: 120 requests/minute per IP per hostname.
+- Security-sensitive endpoints (auth/token related) MUST be rate limited more aggressively.
+  - Default policy: 10 requests/minute per IP.
+- Rate-limited responses MUST return `429` and SHOULD include `Retry-After`.
+- Rate limiting MUST emit an operator-visible signal (logs at warn level).
+
+## Observability Requirements
+
+- Operators MUST be able to observe operational signals via Workers logs.
+- Logs MUST be structured enough to include at minimum: `event`, `level`, `request_id`, and a redacted error message.
+- The system MUST produce operator-actionable diagnostics for:
+  - startup/config validation failures
+  - D1 read/write failures
+  - Durable Object failures (rate limit and dedupe)
+  - analytics ingest failures
+- The redirect path MUST log, at minimum:
+  - startup success (once)
+  - redirect served (sampled or debug-level)
+  - redirect failed (error-level)
+  - storage unavailable (error-level)
+- Logs MUST NOT include secrets/tokens and SHOULD avoid raw IP addresses.
+
+### Request IDs and Error Shape
+
+- All API error responses (authenticated and operational endpoints) MUST include a `requestId` that correlates to logs.
+- Authenticated JSON API error responses MUST use a consistent shape:
+  - `{ "error": { "code": string, "message": string, "requestId": string } }`
+- For public redirect paths, user-visible error bodies MUST be minimal and MUST NOT leak tenant/resource existence.
+
+### Retention
+
+- Click/conversion analytics event retention MUST be at least 30 days (or the Workers quickstart MUST document a shorter retention limit if imposed by the platform).
+
+## Performance Requirements
+
+- **Redirect latency targets** (client-observed TTFB for `GET /{key}` on a warm deployment):
+  - p95  <= 200ms
+  - p99  <= 500ms
+- **Cold start expectation**: p99  <= 1500ms for the first request after deploy.
+- Click tracking MUST NOT materially degrade redirect latency:
+  - Click event ingestion MUST be asynchronous (using `waitUntil` or equivalent).
+  - Redirect response MUST NOT be blocked on analytics writes.
+- Performance MUST be measured in two stages:
+  - Preview smoke (functional correctness only).
+  - Deployed soak test (24 hours) where SC-002 is evaluated.
+
+### Observability Overhead
+
+- Logging and click/conversion tracking MUST be implemented so that redirect latency targets remain achievable (no blocking I/O on the redirect response path).
+
+## Data & Migration Requirements
+
+- D1 MUST be the authoritative primary database for Workers-only hosting.
+- Minimum required entities for US1 MUST exist in D1: `projects`, `domains`, `links`.
+- Schema migrations MUST be applied via Wrangler D1 migrations.
+  - Local preview MUST apply migrations using `wrangler d1 migrations apply --local`.
+  - Production deploy MUST apply migrations using `wrangler d1 migrations apply` before switching traffic.
+- Migration failure handling:
+  - Automatic rollback is not required.
+  - The operator MUST be able to recover by applying a forward-fix migration or restoring the D1 database from an operator-managed backup.
+- Backup/restore expectations:
+  - Backup/restore is operator-managed; the Workers quickstart MUST document a recommended approach.
+- Read-after-write expectations:
+  - After creating or updating a link, the redirect path MUST reflect the change within 5 seconds.
+
+### Data Durability and Recovery
+
+- The Workers quickstart MUST document an operator procedure for restoring D1 from backup.
+- If D1 is temporarily unavailable, redirects MUST either:
+  - fall back to a safe cached response (if available), or
+  - return a minimal error response while preserving tenant confidentiality.
+
+## API Contracts
+
+- Operational endpoints MUST conform to the OpenAPI contract in `specs/001-cloudflare-workers/contracts/workers-hosting.openapi.yaml`.
+- For existing Dub API endpoints used in US2 (link CRUD), the Workers-hosted deployment MUST preserve the current contract and behavior as documented in `apps/web/guides/rest-api.md` (or successor docs) and validated by integration tests.
+
 ## Requirements *(mandatory)*
 
 <!--
@@ -132,11 +325,11 @@ As an operator, I want any non-compatible dependencies or integrations to be rep
 
 ### Measurable Outcomes
 
-- **SC-001**: A new self-hoster can complete a first successful deployment to Cloudflare Workers in under 30 minutes following documented steps.
-- **SC-002**: Public redirects succeed for at least 99.9% of requests over a 24-hour soak test in a Workers-hosted environment.
+- **SC-001**: A new self-hoster can complete a first successful deployment to Cloudflare Workers in under 30 minutes following documented steps, including verifying `/api/health` and (when enabled) `/api/_internal/compat`.
+- **SC-002**: Public redirects succeed for at least 99.9% of requests over a 24-hour soak test in a Workers-hosted environment, and meet the redirect latency targets (p95 <= 200ms, p99 <= 500ms).
 - **SC-003**: Workspace members can complete the primary management flow (sign in → create a link → verify redirect) with a first-attempt completion rate of at least 90%.
-- **SC-004**: The Workers-hosted build has zero runtime failures caused by unsupported runtime capabilities during automated deployment validation.
-- **SC-005**: Multi-tenant isolation is verified by automated tests: zero cross-workspace data access across representative API operations.
+- **SC-004**: The Workers-hosted build has zero runtime failures caused by unsupported runtime capabilities during automated deployment validation, and failures (if any) include actionable diagnostics.
+- **SC-005**: Multi-tenant isolation is verified by automated tests: zero cross-workspace data access across representative operations including (at minimum) link creation, link listing, link updates, and redirect resolution.
 
 ## Assumptions
 

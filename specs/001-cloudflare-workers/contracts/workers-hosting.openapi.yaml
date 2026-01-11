@@ -39,6 +39,13 @@ paths:
       description: |
         Returns a compatibility matrix snapshot for the current deployment.
         Intended for operators; may be protected in production.
+      parameters:
+        - in: header
+          name: X-Operator-Token
+          required: false
+          schema:
+            type: string
+          description: Operator token required when the endpoint is enabled.
       responses:
         "200":
           description: Compatibility report
@@ -46,4 +53,31 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                additionalProperties: false
+                required: [runtime, contractVersion, integrations]
+                properties:
+                  runtime:
+                    type: string
+                    enum: [workers]
+                  contractVersion:
+                    type: string
+                    description: OpenAPI contract version
+                  integrations:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties: true
+                      required: [status]
+                      properties:
+                        status:
+                          type: string
+                          enum: [supported, replaced, disabled]
+                        replacement:
+                          type: string
+                          nullable: true
+                        notes:
+                          type: string
+                          nullable: true
+
+        "404":
+          description: Not found (endpoint disabled or operator token missing/invalid)

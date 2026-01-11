@@ -138,7 +138,7 @@
 - [ ] T052 Run the operator quickstart end-to-end and update specs/001-cloudflare-workers/quickstart.md with any missing steps
 
 - [ ] T053 [P] Add automated isolation regression test for Workers hosting in apps/web/tests/workspaces/workers-isolation.test.ts (ensures cross-workspace access fails; maps to SC-005)
-- [ ] T054 [P] Add automated Workers build + smoke validation workflow in .github/workflows/workers-smoke.yaml (build Workers artifact + run local smoke; maps to SC-004)
+- [ ] T054 [P] Add automated Workers build + smoke validation workflow in .github/workflows/workers-smoke.yaml (validate OpenAPI contract in specs/001-cloudflare-workers/contracts/workers-hosting.openapi.yaml; build Workers artifact + run local smoke; maps to SC-004)
 
 ---
 
